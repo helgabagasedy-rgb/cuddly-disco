@@ -1,7 +1,6 @@
 --==================================================
--- SLEEPY HUB V4
+-- SLEEPY HUB V5
 -- AUTO FARM + AUTO INTERACT + ANTI AFK
--- TOWER FALLBACK SYSTEM
 --==================================================
 
 local Players = game:GetService("Players")
@@ -24,11 +23,12 @@ local points = {
 local fallbackPosition =
 	Vector3.new(769, 628, -1041)
 
-local FARM_TIME = 300 -- 5 menit
+local CHECK_INTERVAL = 300 -- 5 menit
 
 local autoFarm = false
 local autoInteract = false
 local antiAFK = false
+
 local currentTween = nil
 
 --==================================================
@@ -51,7 +51,7 @@ end
 --==================================================
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "SleepyHubV4"
+gui.Name = "SleepyHubV5"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -77,7 +77,6 @@ corner.Parent = main
 local stroke = Instance.new("UIStroke")
 stroke.Color =
 	Color3.fromRGB(75,75,100)
-
 stroke.Thickness = 1.5
 stroke.Transparency = 0.2
 stroke.Parent = main
@@ -97,12 +96,13 @@ title.Position =
 title.BackgroundTransparency = 1
 
 title.Text =
-	"SLEEPY  •  HUB V4"
+	"SLEEPY  •  HUB V5"
 
 title.TextColor3 =
 	Color3.fromRGB(255,255,255)
 
 title.TextSize = 20
+
 title.Font =
 	Enum.Font.GothamBold
 
@@ -128,6 +128,7 @@ subtitle.TextColor3 =
 	Color3.fromRGB(145,145,165)
 
 subtitle.TextSize = 12
+
 subtitle.Font =
 	Enum.Font.Gotham
 
@@ -157,12 +158,14 @@ mini.TextColor3 =
 	Color3.fromRGB(255,255,255)
 
 mini.TextSize = 20
+
 mini.Font =
 	Enum.Font.GothamBold
 
 mini.Parent = main
 
-local miniCorner = Instance.new("UICorner")
+local miniCorner =
+	Instance.new("UICorner")
 
 miniCorner.CornerRadius =
 	UDim.new(0,10)
@@ -173,7 +176,8 @@ miniCorner.Parent = mini
 -- STATUS
 --==================================================
 
-local status = Instance.new("TextLabel")
+local status =
+	Instance.new("TextLabel")
 
 status.Size =
 	UDim2.new(1,-40,0,45)
@@ -191,17 +195,20 @@ status.TextColor3 =
 	Color3.fromRGB(100,255,160)
 
 status.TextSize = 14
+
 status.Font =
 	Enum.Font.GothamBold
 
 status.Parent = main
 
-local statusCorner = Instance.new("UICorner")
+local statusCorner =
+	Instance.new("UICorner")
 
 statusCorner.CornerRadius =
 	UDim.new(0,12)
 
-statusCorner.Parent = status
+statusCorner.Parent =
+	status
 
 --==================================================
 -- BUTTON CREATOR
@@ -235,7 +242,8 @@ local function makeButton(text,y)
 
 	button.Parent = main
 
-	local c = Instance.new("UICorner")
+	local c =
+		Instance.new("UICorner")
 
 	c.CornerRadius =
 		UDim.new(0,12)
@@ -330,7 +338,7 @@ info.Position =
 info.BackgroundTransparency = 1
 
 info.Text =
-	"4 WAYPOINTS • 5 MIN FALLBACK"
+	"4 WAYPOINTS • CHECK 5 MIN"
 
 info.TextColor3 =
 	Color3.fromRGB(110,110,130)
@@ -461,6 +469,48 @@ local function fallbackTeleport()
 end
 
 --==================================================
+-- 5 MINUTE CHECK
+--==================================================
+
+local function startInteractChecker()
+
+	task.spawn(function()
+
+		while autoFarm do
+
+			task.wait(CHECK_INTERVAL)
+
+			if not autoFarm then
+				break
+			end
+
+			status.Text =
+				"● CHECKING INTERACT..."
+
+			local found =
+				hasInteractPrompt()
+
+			if not found then
+
+				status.Text =
+					"● INTERACT NOT FOUND"
+
+				task.wait(0.5)
+
+				fallbackTeleport()
+
+				status.Text =
+					"● FALLBACK TELEPORT"
+
+				task.wait(1)
+
+			end
+		end
+
+	end)
+end
+
+--==================================================
 -- AUTO FARM
 --==================================================
 
@@ -508,13 +558,11 @@ local function startAutoFarm()
 			100,255,160
 		)
 
+	startInteractChecker()
+
 	task.spawn(function()
 
 		while autoFarm do
-
-			--==========================================
-			-- TOWER WAYPOINTS
-			--==========================================
 
 			for i,position in ipairs(points) do
 
@@ -527,90 +575,15 @@ local function startAutoFarm()
 
 				tweenTo(position)
 
+				if not autoFarm then
+					break
+				end
+
 				task.wait(0.2)
 			end
 
-			if not autoFarm then
-				break
-			end
-
-			--==========================================
-			-- WAIT 5 MINUTES
-			--==========================================
-
-			status.Text =
-				"● WAITING TOWER 5:00"
-
-			local startTime =
-				os.clock()
-
-			while autoFarm
-			and os.clock() - startTime
-				< FARM_TIME do
-
-				local remaining =
-					math.ceil(
-						FARM_TIME -
-						(os.clock() - startTime)
-					)
-
-				local min =
-					math.floor(
-						remaining / 60
-					)
-
-				local sec =
-					remaining % 60
-
-				status.Text =
-					string.format(
-						"● TOWER WAIT %d:%02d",
-						min,
-						sec
-					)
-
-				task.wait(1)
-			end
-
-			if not autoFarm then
-				break
-			end
-
-			--==========================================
-			-- CHECK INTERACT
-			--==========================================
-
-			status.Text =
-				"● CHECKING INTERACT..."
-
-			task.wait(0.5)
-
-			if not hasInteractPrompt() then
-
-				status.Text =
-					"● INTERACT NOT FOUND"
-
-				task.wait(0.5)
-
-				status.Text =
-					"● FALLBACK TELEPORT"
-
-				fallbackTeleport()
-
-				task.wait(1)
-
-			else
-
-				status.Text =
-					"● INTERACT FOUND"
-
-				task.wait(1)
-
-			end
-
-			--==========================================
-			-- LOOP BACK TO WAYPOINT 1
-			--==========================================
+			-- LANGSUNG BALIK KE WAYPOINT 1
+			-- TIDAK ADA COOLDOWN 5 MENIT
 
 		end
 
@@ -822,7 +795,7 @@ afkButton.MouseButton1Click:Connect(function()
 end)
 
 --==================================================
--- DRAG
+-- DRAG MOBILE + PC
 --==================================================
 
 local dragging = false
@@ -884,6 +857,7 @@ UserInputService.InputChanged:Connect(function(input)
 				startPosition.Y.Offset
 					+ delta.Y
 			)
+
 	end
 
 end)
@@ -917,18 +891,14 @@ mini.MouseButton1Click:Connect(function()
 	if minimized then
 
 		main.Size =
-			UDim2.new(
-				0,350,0,65
-			)
+			UDim2.new(0,350,0,65)
 
 		mini.Text = "+"
 
 	else
 
 		main.Size =
-			UDim2.new(
-				0,350,0,455
-			)
+			UDim2.new(0,350,0,455)
 
 		mini.Text = "—"
 
